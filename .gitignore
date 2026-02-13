@@ -1,0 +1,33 @@
+# ---- Node / Nest (tm-api) ----
+**/node_modules/
+**/dist/
+**/coverage/
+npm-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+
+# ---- Env / secrets ----
+.env
+.env.*
+*.pem
+*.key
+
+# ---- Docker ----
+**/.dockerignore
+
+# ---- Terraform (tm-infra) ----
+**/.terraform/
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/terraform.tfvars
+
+# ---- OS / IDE ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ---- Logs ----
+*.log
