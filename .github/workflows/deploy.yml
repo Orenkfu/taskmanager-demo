@@ -67,39 +67,9 @@ jobs:
                 \"docker rm -f tm-api || true\",
                 \"docker run -d --name tm-api --restart unless-stopped -p 80:3000 $ECR_REPO_URL:latest\",
                 \"docker ps --filter name=tm-api\",
-                \"curl -fsS http://localhost/health\"
+                \"for i in 1 2 3 4 5 6 7 8 9 10; do curl -fsS http://localhost/health && exit 0; sleep 2; done; echo 'health check failed' >&2; exit 1\"
               ]" \
               --query "Command.CommandId" \
               --output text
           )
 
-          INSTANCE_ID=$(
-            aws ssm describe-instance-information \
-              --region "$AWS_REGION" \
-              --filters Key=tag:App,Values=tm-api \
-              --query "InstanceInformationList[0].InstanceId" \
-              --output text
-          )
-
-          echo "SSM CommandId: $COMMAND_ID"
-          echo "Target InstanceId: $INSTANCE_ID"
-
-          # Wait, but don't fail the job yet
-          set +e
-          aws ssm wait command-executed \
-            --region "$AWS_REGION" \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID"
-          WAIT_RC=$?
-          set -e
-
-          # Always print output
-          aws ssm get-command-invocation \
-            --region "$AWS_REGION" \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID" \
-            --query "{Status:Status,ResponseCode:ResponseCode,Stdout:StandardOutputContent,Stderr:StandardErrorContent}" \
-            --output json
-
-          # Fail the job if wait failed
-          exit $WAIT_RC
