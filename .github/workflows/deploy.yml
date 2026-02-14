@@ -1,0 +1,88 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: tm-api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: tm-api/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --coverage
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region "${{ secrets.AWS_REGION }}" \
+            | docker login --username AWS --password-stdin "${{ secrets.ECR_REPO_URL }}"
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE="${{ secrets.ECR_REPO_URL }}:latest"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Debug EC2 reachability (TCP/22)
+        run: |
+          set -eux
+          echo "Host: ${{ secrets.EC2_HOST }}"
+          timeout 5 bash -lc 'cat < /dev/null > /dev/tcp/${{ secrets.EC2_HOST }}/22' && echo "22 open" || echo "22 blocked"
+
+      - name: Setup SSH (debug)
+        run: |
+          set -eux
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          set +e
+          ssh-keyscan -T 5 -H "${{ secrets.EC2_HOST }}" 2>&1 | tee /tmp/keyscan.log
+          code=${PIPESTATUS[0]}
+          echo "ssh-keyscan exit code: $code"
+          exit $code
+
+      - name: Deploy on EC2
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECR_REPO_URL: ${{ secrets.ECR_REPO_URL }}
+        run: |
+          ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
+            set -euxo pipefail
+
+            aws ecr get-login-password --region "$AWS_REGION" \
+              | docker login --username AWS --password-stdin "$ECR_REPO_URL"
+
+            docker pull "$ECR_REPO_URL:latest"
+
+            docker rm -f tm-api || true
+
+            docker run -d --name tm-api \
+              --restart unless-stopped \
+              -p 80:3000 \
+              "$ECR_REPO_URL:latest"
+          EOF
