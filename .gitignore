@@ -32,4 +32,5 @@ Thumbs.db
 # ---- Logs ----
 *.log
 
-# Testing CI #
+# Windows reserved redirect footgun
+**/nul
