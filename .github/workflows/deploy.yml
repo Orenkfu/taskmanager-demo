@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [ SSH-Setup-Issue ]
 
 jobs:
   deploy:
@@ -50,28 +50,20 @@ jobs:
       - name: Debug EC2 reachability (TCP/22)
         run: |
           set -eux
-          echo "Host: ${{ secrets.EC2_HOST }}"
-          timeout 5 bash -lc 'cat < /dev/null > /dev/tcp/${{ secrets.EC2_HOST }}/22' && echo "22 open" || echo "22 blocked"
-
-      - name: Setup SSH (debug)
-        run: |
-          set -eux
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          set +e
-          ssh-keyscan -T 5 -H "${{ secrets.EC2_HOST }}" 2>&1 | tee /tmp/keyscan.log
-          code=${PIPESTATUS[0]}
-          echo "ssh-keyscan exit code: $code"
-          exit $code
+          HOST="${{ secrets.EC2_HOST }}"
+          echo "Host: $HOST"
+          timeout 5 bash -lc "cat < /dev/null > /dev/tcp/${HOST}/22"
+          echo "22 open"
 
       - name: Deploy on EC2
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ECR_REPO_URL: ${{ secrets.ECR_REPO_URL }}
         run: |
-          ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
+          ssh -i ~/.ssh/id_rsa \
+              -o BatchMode=yes \
+              -o StrictHostKeyChecking=yes \
+              "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
             set -euxo pipefail
 
             aws ecr get-login-password --region "$AWS_REGION" \
