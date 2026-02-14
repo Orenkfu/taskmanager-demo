@@ -41,12 +41,19 @@ jobs:
           aws ecr get-login-password --region "${{ secrets.AWS_REGION }}" \
             | docker login --username AWS --password-stdin "${{ secrets.ECR_REPO_URL }}"
 
-      - name: Build and push Docker image
-        run: |
-          IMAGE="${{ secrets.ECR_REPO_URL }}:latest"
-          docker build -t "$IMAGE" .
-          docker push "$IMAGE"
+      # - name: Build and push Docker image
+      #   run: |
+      #     IMAGE="${{ secrets.ECR_REPO_URL }}:latest"
+      #     docker build -t "$IMAGE" .
+      #     docker push "$IMAGE"
 
+      - name: Debug EC2 reachability (TCP/80)
+        run: |
+          set -eux
+          HOST="${{ secrets.EC2_HOST }}"
+          timeout 5 bash -lc "cat < /dev/null > /dev/tcp/${HOST}/80"
+          echo "80 open"
+      
       - name: Debug EC2 reachability (TCP/22)
         run: |
           set -eux
