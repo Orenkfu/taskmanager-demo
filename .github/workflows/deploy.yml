@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [ SSH-Setup-Issue ]
+    branches: [ deploy-test ]  # change to main when ready
 
 jobs:
   deploy:
