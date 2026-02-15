@@ -46,6 +46,10 @@ jobs:
           IMAGE="${{ secrets.ECR_REPO_URL }}:latest"
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
+<<<<<<< HEAD
+          
+      - name: Deploy via SSM
+=======
 
       - name: Setup SSH
         run: |
@@ -55,10 +59,62 @@ jobs:
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Deploy on EC2
+>>>>>>> 50d2fe3ced6d46d8efe7d7a9f4a3bd1b60107525
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ECR_REPO_URL: ${{ secrets.ECR_REPO_URL }}
         run: |
+<<<<<<< HEAD
+          set -eux
+
+          COMMAND_ID=$(
+            aws ssm send-command \
+              --region "$AWS_REGION" \
+              --document-name "AWS-RunShellScript" \
+              --targets "Key=tag:App,Values=tm-api" \
+              --comment "Deploy tm-api from ECR" \
+              --parameters "commands=[
+                \"set -eux\",
+                \"REGISTRY=\$(echo $ECR_REPO_URL | cut -d/ -f1)\",
+                \"aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin \$REGISTRY\",
+                \"docker pull $ECR_REPO_URL:latest\",
+                \"docker rm -f tm-api || true\",
+                \"docker run -d --name tm-api --restart unless-stopped -p 80:3000 $ECR_REPO_URL:latest\",
+                \"for i in 1 2 3 4 5 6 7 8 9 10; do curl -fsS http://localhost/health && exit 0; sleep 2; done; echo 'health check failed' >&2; exit 1\"
+              ]" \
+              --query "Command.CommandId" \
+              --output text
+          )
+
+          INSTANCE_ID=$(
+            aws ssm describe-instance-information \
+              --region "$AWS_REGION" \
+              --filters Key=tag:App,Values=tm-api \
+              --query "InstanceInformationList[0].InstanceId" \
+              --output text
+          )
+
+          echo "SSM CommandId: $COMMAND_ID"
+          echo "Target InstanceId: $INSTANCE_ID"
+
+          set +e
+          aws ssm wait command-executed \
+            --region "$AWS_REGION" \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID"
+          WAIT_RC=$?
+          set -e
+
+          aws ssm get-command-invocation \
+            --region "$AWS_REGION" \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query "{Status:Status,ResponseCode:ResponseCode,Stdout:StandardOutputContent,Stderr:StandardErrorContent}" \
+            --output json
+
+          exit $WAIT_RC
+
+=======
           ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
             set -euxo pipefail
 
@@ -74,3 +130,4 @@ jobs:
               -p 80:3000 \
               "$ECR_REPO_URL:latest"
           EOF
+>>>>>>> 50d2fe3ced6d46d8efe7d7a9f4a3bd1b60107525
