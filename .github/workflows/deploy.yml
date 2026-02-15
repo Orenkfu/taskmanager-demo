@@ -46,25 +46,12 @@ jobs:
           IMAGE="${{ secrets.ECR_REPO_URL }}:latest"
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
-<<<<<<< HEAD
           
       - name: Deploy via SSM
-=======
-
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
-
-      - name: Deploy on EC2
->>>>>>> 50d2fe3ced6d46d8efe7d7a9f4a3bd1b60107525
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ECR_REPO_URL: ${{ secrets.ECR_REPO_URL }}
         run: |
-<<<<<<< HEAD
           set -eux
 
           COMMAND_ID=$(
@@ -114,20 +101,3 @@ jobs:
 
           exit $WAIT_RC
 
-=======
-          ssh "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
-            set -euxo pipefail
-
-            aws ecr get-login-password --region "$AWS_REGION" \
-              | docker login --username AWS --password-stdin "$ECR_REPO_URL"
-
-            docker pull "$ECR_REPO_URL:latest"
-
-            docker rm -f tm-api || true
-
-            docker run -d --name tm-api \
-              --restart unless-stopped \
-              -p 80:3000 \
-              "$ECR_REPO_URL:latest"
-          EOF
->>>>>>> 50d2fe3ced6d46d8efe7d7a9f4a3bd1b60107525
