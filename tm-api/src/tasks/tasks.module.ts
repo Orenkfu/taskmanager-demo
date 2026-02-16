@@ -8,4 +8,4 @@ import { PersistenceModule } from '../persistence/persistence.module';
   controllers: [TasksController],
   providers: [TasksService],
 })
-export class TasksModule {}
+export class TasksModule { }

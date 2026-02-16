@@ -8,4 +8,4 @@ import { PersistenceModule } from '../persistence/persistence.module';
   controllers: [HealthController],
   providers: [HealthService],
 })
-export class HealthModule {}
+export class HealthModule { }

@@ -5,7 +5,7 @@ import { PERSISTENCE_HEALTH, type PersistenceHealth } from '../persistence/persi
 export class HealthService {
   constructor(
     @Inject(PERSISTENCE_HEALTH) private readonly persistence: PersistenceHealth,
-  ) {}
+  ) { }
 
   async readiness() {
     const checks: Record<string, any> = {};

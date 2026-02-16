@@ -5,7 +5,7 @@ import type { Task } from './entities/task.entity';
 
 @Controller('tasks')
 export class TasksController {
-  constructor(private readonly service: TasksService) {}
+  constructor(private readonly service: TasksService) { }
 
   @Get()
   async list(): Promise<Task[]> {
