@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Task, TaskStatus } from './entities/task.entity';
 import type { CreateTaskDto } from './dto/create-task.dto';
@@ -16,7 +16,11 @@ export class TasksService {
   }
 
   async createTask(dto: CreateTaskDto): Promise<Task> {
-    console.log("Creating Task: ", dto)
+    const title = dto.title.trim();
+    // Prefer explicit transform, if more shows up I'd extract it to transformation rules
+    if (!title) {
+      throw new BadRequestException('title must not be empty');
+    }
     const task: Task = {
       id: randomUUID(),
       title: dto.title.trim(),
