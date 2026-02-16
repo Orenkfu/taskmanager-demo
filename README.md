@@ -1,92 +1,203 @@
-Infrastructure & Deployment
-High-level architecture
+# Task Manager Demo
 
-API: NestJS app packaged as a Docker image.
+A simple Task Management API built with NestJS, containerized with Docker, and deployed to AWS EC2 using Terraform and GitHub Actions.  
+This project demonstrates backend development, testing, infrastructure-as-code, and a basic CI/CD pipeline.
 
-Container registry: Amazon ECR stores the built image (:latest tag used for simplicity).
+---
 
-Compute: Single EC2 (Ubuntu 22.04) instance runs the container and exposes HTTP on port 80.
+## Overview
 
-Provisioning: Terraform provisions EC2, ECR, IAM role/profile, and the Security Group.
+The service exposes a minimal REST API for managing tasks, along with a health endpoint suitable for load balancers and monitoring. The application is packaged as a Docker image and deployed to AWS using a fully automated pipeline.
 
-Deployment: GitHub Actions builds/tests, pushes image to ECR, then triggers deployment via AWS Systems Manager (SSM) (no SSH).
+This project was built as a take-home style exercise, focusing on correctness, clarity, and reproducibility rather than production-scale complexity.
 
-Why SSM instead of SSH
+---
 
-No inbound admin port (22) required.
+## API
 
-No SSH key material stored as GitHub secrets.
+### Endpoints
 
-Instance is managed through AWS IAM + SSM Agent over outbound HTTPS (443).
+**GET /tasks**  
+Returns all tasks.
 
-Command output (stdout/stderr) is retrievable and can be logged from CI.
+**POST /tasks**  
+Creates a new task.
 
-Network security
+Example request:
+```json
+{
+  "title": "Buy milk",
+  "status": "todo"
+}
+```
 
-Inbound
+**GET /health**
+Readiness endpoint for monitoring and load balancers.
 
-80/tcp open to 0.0.0.0/0 for HTTP traffic to the API.
+---
 
-No inbound SSH (deployment and management are via SSM).
+## Architecture
 
-Outbound
+The system consists of:
 
-Open egress is required for:
+* A NestJS API running inside a Docker container
 
-SSM agent connectivity to AWS endpoints
+* Amazon ECR for container image storage
 
-Pulling container images from ECR
+* A single EC2 instance running the container
 
-Bootstrapping packages during instance initialization
+* Terraform for provisioning infrastructure
 
-IAM / permissions model
+* GitHub Actions for CI/CD
 
-CI (GitHub Actions) uses AWS credentials to:
+* AWS Systems Manager (SSM) for deployment (no SSH access required)
 
-authenticate to ECR and push images
+This architecture is intentionally simple and single-node to keep the focus on core concepts.
 
-invoke SSM Run Command for deployment
+---
 
-EC2 Instance Role grants:
+## Infrastructure & Deployment
+### High-Level Flow
 
-AmazonEC2ContainerRegistryReadOnly – pull images from ECR
+On every deployment:
 
-AmazonSSMManagedInstanceCore – allow SSM management (Run Command)
+1. GitHub Actions runs unit tests.
 
-Instance bootstrapping (user_data)
+2. A Docker image is built and pushed to Amazon ECR.
 
-On first boot, the instance uses user_data to install:
+3. The EC2 instance pulls the new image via AWS SSM.
 
-AWS CLI (for ECR login during deployment)
+4. The running container is replaced.
 
-Docker Engine (to run the container)
+5. A local /health check is performed to verify the deployment.
 
-SSM Agent (so the instance is manageable without SSH)
+---
 
-Deployment flow (CD)
+## Why AWS SSM Instead of SSH
 
-On push to the deployment branch (or main once finalized):
+The EC2 instance is managed using AWS Systems Manager rather than SSH:
 
-Run unit tests (Jest) with coverage.
+* No inbound SSH port (22) is exposed.
+* No SSH keys are stored in GitHub secrets.
+* Access is controlled via IAM roles.
+* All commands and logs are auditable through AWS.
 
-Build Docker image and push to ECR.
+This is more secure and simpler to operate for automated deployments.
 
-Deploy via SSM:
+---
 
-login to ECR from the instance
+## Network Security
 
-pull latest image
+Inbound traffic
 
-stop/remove prior container
+* Port 80 is open to allow HTTP access to the API.
+* No administrative ports are exposed.
 
-run new container with -p 80:3000
+Outbound traffic
 
-run a local health check with retries (/health)
+Open egress is required to allow:
 
-Terraform notes / tradeoffs
+* SSM agent communication with AWS APIs
+* Docker image pulls from ECR
+* Package installation during instance bootstrapping
 
-Uses the default VPC/subnet for simplicity.
+## IAM Model
 
-AMI selection uses the latest Ubuntu 22.04 (most_recent = true) as a take-home shortcut; in production the AMI would typically be pinned or produced via an image pipeline for reproducibility.
+The EC2 instance uses an IAM role that allows:
 
-Single-instance deployment (no load balancer, autoscaling, or multi-AZ).
+* Pulling images from ECR
+* Being managed via SSM
+
+ GitHub Actions uses separate AWS credentials with permission to:
+
+* Push images to ECR
+* Trigger SSM Run Command for deployment
+
+This separation ensures the instance itself does not have deployment privileges.
+
+---
+
+## Instance Bootstrapping
+
+On first boot, the EC2 instance installs:
+
+* Docker
+* AWS CLI
+* Amazon SSM Agent
+
+This is done via user_data so the instance is fully reproducible using Terraform alone.
+--- 
+
+## Terraform Notes
+
+* The default VPC and subnet are used for simplicity.
+* The Ubuntu 22.04 AMI is selected dynamically (latest matching image).
+* In production, AMIs would typically be pinned or baked via an image pipeline.
+* The system runs on a single EC2 instance (no load balancer or autoscaling).
+
+These choices are deliberate tradeoffs for a take-home style project.
+
+---
+
+## Testing
+
+* Unit tests are written with Jest.
+* Business logic is tested in isolation with mocked repositories.
+* Coverage thresholds are enforced (≥ 80%).
+* The focus is on validating application behavior rather than framework internals.
+
+---
+
+## Scalability (Discussion)
+
+If traffic increased significantly, the following changes would be made:
+
+* Replace the single EC2 instance with:
+* An Auto Scaling Group or ECS/Fargate
+* An Application Load Balancer
+* Move persistence to a real database (e.g., RDS or DynamoDB)
+* Introduce versioned container deployments (no :latest)
+* Add rolling or blue/green deployments
+* Add caching for frequently accessed data
+
+The current architecture is not horizontally scalable by design.
+
+---
+
+## Observability (Discussion)
+
+* In a production environment, observability would be extended with:
+* Centralized log aggregation (e.g., CloudWatch Logs, ELK, Datadog)
+
+#### Metrics for:
+
+* Request latency
+* Error rates
+* Health check failures
+* Distributed tracing (OpenTelemetry)
+
+#### Alerting on:
+
+* Deployment failures
+* Health endpoint failures
+* Elevated error rates
+
+## Limitations
+
+This project intentionally omits:
+
+* Persistent storage
+* Authentication and authorization
+* TLS termination
+* Load balancing
+* Zero-downtime deployments
+
+These are outside the scope of the exercise but would be required in a production system.
+
+## Local Development
+```
+cd tm-api
+npm install
+npm test
+npm run start:dev
+```

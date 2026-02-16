@@ -1,5 +1,3 @@
-// src/middleware/request-logger.middleware.spec.ts
-
 import { RequestLoggerMiddleware } from './request-logger.middleware';
 import { Logger } from '@nestjs/common';
 

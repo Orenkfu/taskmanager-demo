@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 
 const localhost = '0.0.0.0';
+const defaultPort = 3000;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,7 +14,8 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-  await app.listen(process.env.PORT ?? 3000, localhost);
+  app.enableShutdownHooks();
+  await app.listen(process.env.PORT ?? defaultPort, localhost);
 }
 
 bootstrap();
