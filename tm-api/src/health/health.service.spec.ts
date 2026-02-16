@@ -1,5 +1,3 @@
-// src/health/health.service.spec.ts
-
 import { Test } from '@nestjs/testing';
 import { HealthService } from './health.service';
 import {
