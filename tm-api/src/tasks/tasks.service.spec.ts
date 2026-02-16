@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 import { TASKS_REPOSITORY, type TasksRepository } from './tasks.repository';
 import { TaskStatus } from './entities/task.entity';
+import { BadRequestException } from '@nestjs/common';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -11,7 +12,6 @@ describe('TasksService', () => {
     repo = {
       list: jest.fn(),
       create: jest.fn(),
-      ping: jest.fn()
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -59,5 +59,10 @@ describe('TasksService', () => {
     });
 
     expect(task.status).toBe(TaskStatus.Done);
+  });
+
+  it('createTask rejects whitespace-only title', async () => {
+    await expect(service.createTask({ title: '   ' } as any))
+      .rejects.toBeInstanceOf(BadRequestException);
   });
 });

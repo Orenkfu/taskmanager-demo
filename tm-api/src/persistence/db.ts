@@ -7,14 +7,14 @@ export enum TableName {
 @Injectable()
 export class DB {
   private readonly tables: Record<TableName, Map<string, any>> = {
-    tasks: new Map(),
+    [TableName.TASKS]: new Map(),
   };
+  private healthy = true;
 
-  /*
-     A stub for database ping - if the process is up this "DB" is up.
-  */ 
+  setHealthy(v: boolean) { this.healthy = v; }
+
   async ping(): Promise<void> {
-    return;
+    if (!this.healthy) throw new Error('DB unavailable');
   }
 
   async insert<T>(table: TableName, id: string, value: T): Promise<T> {

@@ -1,7 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { TasksModule } from './tasks/tasks.module';
-import { HealthController } from './health/health.controller';
-import { RequestLoggerMiddleware } from './middleware/request-logger.middlewhere';
+import { RequestLoggerMiddleware } from './middleware/request-logger.middleware';
 import { PersistenceModule } from './persistence/persistence.module';
 import { HealthModule } from './health/health.module';
 

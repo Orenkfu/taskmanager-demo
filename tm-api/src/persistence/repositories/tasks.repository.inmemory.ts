@@ -5,7 +5,7 @@ import { DB, TableName } from '../db';
 
 
 @Injectable()
-export class TasksRepositoryImpl implements TasksRepository {
+export class TasksRepositoryInMemory implements TasksRepository {
     constructor(private readonly db: DB) {}
 
   async list(): Promise<Task[]> {
@@ -14,7 +14,5 @@ export class TasksRepositoryImpl implements TasksRepository {
 
   async create(task: Task): Promise<Task> {
     return this.db.insert<Task>(TableName.TASKS, task.id, task);
-  }
-  async ping(): Promise<void> {
   }
 }
