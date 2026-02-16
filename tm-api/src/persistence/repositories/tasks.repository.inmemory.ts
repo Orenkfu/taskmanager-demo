@@ -6,7 +6,7 @@ import { DB, TableName } from '../db';
 
 @Injectable()
 export class TasksRepositoryInMemory implements TasksRepository {
-    constructor(private readonly db: DB) {}
+  constructor(private readonly db: DB) { }
 
   async list(): Promise<Task[]> {
     return this.db.getAll<Task>(TableName.TASKS);

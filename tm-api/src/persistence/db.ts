@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 export enum TableName {
-    TASKS = 'tasks',
+  TASKS = 'tasks',
 }
 
 @Injectable()
@@ -13,6 +13,7 @@ export class DB {
 
   setHealthy(v: boolean) { this.healthy = v; }
 
+  // health check is a stub for in-memory db, this allows us to run tests
   async ping(): Promise<void> {
     if (!this.healthy) throw new Error('DB unavailable');
   }

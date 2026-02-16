@@ -16,4 +16,4 @@ import { TASKS_REPOSITORY } from '../tasks/tasks.repository';
     TASKS_REPOSITORY,
   ],
 })
-export class PersistenceModule {}
+export class PersistenceModule { }
